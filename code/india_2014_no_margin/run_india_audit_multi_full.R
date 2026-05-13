@@ -260,11 +260,12 @@ actual_type_probs <- lapply(seq_len(W), function(j) {
 ## ============================================================
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 3L) {
-  stop("Usage: Rscript run_india_audit_multi_full.R <R> <results_dir> <seed>")
+  stop("Usage: Rscript run_india_audit_multi_full.R <R> <results_dir> <seed> [rep_id]")
 }
 R           <- as.integer(args[1])
 results_dir <- args[2]
 seed        <- as.integer(args[3])
+rep_id      <- if (length(args) >= 4L) args[4] else ""
 
 n_false <- 0L  # full audit only meaningful when no seats are falsely reported
 
@@ -337,7 +338,8 @@ cat(sprintf("median t_eval = %.0f  (%.1fs)\n",
             (proc.time() - t0)[3])); flush.console()
 results <- collect(res, "Full audit", r_majority, n_false)
 
-outfile <- file.path(results_dir, "results_india_multi_full.rds")
+suffix  <- if (nzchar(rep_id)) sprintf("_rep%s", rep_id) else ""
+outfile <- file.path(results_dir, sprintf("results_india_multi_full%s.rds", suffix))
 saveRDS(results, outfile)
 cat(sprintf("\nSaved %s (%d rows)\n", outfile, nrow(results)))
 

@@ -112,31 +112,30 @@ method_colors <- c("All seats" = "#D55E00", "Reported top-r seats" = "#882255",
                     "Greedy Filtered (a=3)" = "#F0E442")
 hdf$method <- factor(hdf$method, levels = method_order)
 
-## -- One page per (W, n_false); panels = p_alice (stacked across rows) --
-pages <- unique(hdf[, c("W_label", "false_label")])
-pages <- pages[order(pages$W_label, pages$false_label), ]
+## -- One page per W; rows = p_alice, cols = n_false --
+pages <- unique(hdf[, "W_label", drop = FALSE])
+pages <- pages[order(pages$W_label), , drop = FALSE]
 
 n_margins <- length(unique(hdf$margin_label))
-fig_width  <- 8
-fig_height <- 2 + 2.5 * n_margins
 
-pdf(output_pdf, width = fig_width, height = fig_height)
+pdf_files <- character(0)
 
 for (pg in seq_len(nrow(pages))) {
   wl <- pages$W_label[pg]
-  fl <- pages$false_label[pg]
 
-  pdata <- hdf[hdf$W_label == wl & hdf$false_label == fl, ]
+  pdata <- hdf[hdf$W_label == wl, ]
   if (nrow(pdata) == 0) next
+
+  n_false_pg <- length(unique(pdata$false_label))
 
   p <- ggplot(pdata, aes(x = t_round, colour = method, fill = method)) +
     geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.2, colour = NA) +
     geom_line(aes(y = median), linewidth = 0.6) +
-    facet_wrap(~ margin_label, scales = "free", ncol = 1) +
+    facet_grid(margin_label ~ false_label, scales = "free") +
     scale_colour_manual(values = method_colors, drop = FALSE) +
     scale_fill_manual(values = method_colors, drop = FALSE) +
     labs(
-      title    = sprintf("Cumulative Ballots Sampled vs Round -- %s, %s", wl, fl),
+      title    = sprintf("Cumulative Ballots Sampled vs Round -- %s", wl),
       subtitle = "Median with 25th-75th percentile ribbon",
       x      = "Round (t_round)",
       y      = "Cumulative ballots sampled (t_eval)",
@@ -152,8 +151,24 @@ for (pg in seq_len(nrow(pages))) {
       panel.grid.minor = element_blank()
     )
 
+  fig_width  <- 4 + 3.5 * n_false_pg
+  fig_height <- 2 + 2.5 * n_margins
+  tmp <- tempfile(fileext = ".pdf")
+  pdf(tmp, width = fig_width, height = fig_height)
   print(p)
+  dev.off()
+  pdf_files <- c(pdf_files, tmp)
 }
 
-dev.off()
+if (length(pdf_files) == 0) {
+  pdf(output_pdf); dev.off()
+} else if (requireNamespace("qpdf", quietly = TRUE)) {
+  qpdf::pdf_combine(pdf_files, output_pdf)
+  file.remove(pdf_files)
+} else {
+  gs_cmd <- sprintf("gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s %s",
+                     shQuote(output_pdf), paste(shQuote(pdf_files), collapse = " "))
+  system(gs_cmd)
+  file.remove(pdf_files)
+}
 cat(sprintf("Figure saved: %s\n", output_pdf))

@@ -287,18 +287,23 @@ cat(sprintf("  prior assertion means: real range=[%.4f, %.4f]; padded all=%.4f\n
 
 ## ============================================================
 ## Command-line arguments (eps removed)
-## Usage: Rscript run_india_audit_multi.R <n_false> <R> <results_dir> <seed>
+## Usage: Rscript run_india_audit_multi.R <n_false> <R> <results_dir> <seed> [rep_id]
+##   rep_id (optional) — string appended to the output filename so multiple
+##   parallel jobs at the same n_false don't clobber each other.
 ## ============================================================
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 4L) {
-  stop("Usage: Rscript run_india_audit_multi.R <n_false> <R> <results_dir> <seed>")
+  stop("Usage: Rscript run_india_audit_multi.R <n_false> <R> <results_dir> <seed> [rep_id]")
 }
 n_false     <- as.integer(args[1])
 R           <- as.integer(args[2])
 results_dir <- args[3]
 seed        <- as.integer(args[4])
+rep_id      <- if (length(args) >= 5L) args[5] else ""
 
-cat(sprintf("Config: n_false=%d  R=%d  seed=%d\n", n_false, R, seed))
+cat(sprintf("Config: n_false=%d  R=%d  seed=%d%s\n",
+            n_false, R, seed,
+            if (nzchar(rep_id)) sprintf("  rep_id=%s", rep_id) else ""))
 
 ## ============================================================
 ## Audit parameters
@@ -469,8 +474,9 @@ cat(sprintf("median t_eval = %.0f  (%.1fs)\n",
             (proc.time() - t0)[3])); flush.console()
 results <- rbind(results, collect(res, "Top-r Naive", r_majority, n_false))
 
+suffix  <- if (nzchar(rep_id)) sprintf("_rep%s", rep_id) else ""
 outfile <- file.path(results_dir,
-                     sprintf("results_india_multi_nfalse%d.rds", n_false))
+                     sprintf("results_india_multi_nfalse%d%s.rds", n_false, suffix))
 saveRDS(results, outfile)
 cat(sprintf("\nSaved %s (%d rows)\n", outfile, nrow(results)))
 

@@ -36,6 +36,9 @@ names(agg)[names(agg) == "t_eval.mean"] <- "mean_eval"
 names(agg)[names(agg) == "t_eval.sd"]   <- "sd_eval"
 
 ## -- Labels --
+agg$eps_label    <- sprintf("eps = %.2f", agg$eps)
+agg$eps_label    <- factor(agg$eps_label,
+                            levels = sprintf("eps = %.2f", sort(unique(agg$eps))))
 agg$false_label  <- sprintf("%d incorrect", agg$n_false)
 agg$false_label  <- factor(agg$false_label,
                             levels = sprintf("%d incorrect", sort(unique(agg$n_false))))
@@ -46,28 +49,14 @@ agg$W_label      <- sprintf("W = %d", agg$W)
 agg$W_label      <- factor(agg$W_label,
                             levels = sprintf("W = %d", sort(unique(agg$W))))
 
-method_remap <- c(
-  "Naive"                 = "Non-adaptive",
-  "Bayesian"              = "Filtered",
-  "Greedy Bayesian"       = "Greedy Filtered",
-  "Greedy Bayesian (a=3)" = "Greedy Filtered (a=3)",
-  "Top-r Naive"           = "Reported top-r seats",
-  "Full audit"            = "All seats"
-)
-for (old in names(method_remap)) {
-  agg$method[agg$method == old] <- method_remap[[old]]
-}
-
-method_order <- c("All seats", "Reported top-r seats", "Non-adaptive", "Greedy",
-                   "Greedy (a=3)", "Filtered", "Greedy Filtered",
-                   "Greedy Filtered (a=3)")
+method_order <- c("Full audit", "Top-r Naive", "Naive", "Greedy",
+                   "Greedy (a=5%)", "Bayesian", "Greedy Bayesian")
 agg$method <- factor(agg$method, levels = method_order)
 
-method_colors <- c("All seats" = "#D55E00", "Reported top-r seats" = "#882255",
-                    "Non-adaptive" = "#0072B2",
-                    "Greedy" = "#009E73", "Greedy (a=3)" = "#CC79A7",
-                    "Filtered" = "#E69F00", "Greedy Filtered" = "#56B4E9",
-                    "Greedy Filtered (a=3)" = "#F0E442")
+method_colors <- c("Full audit" = "#D55E00", "Top-r Naive" = "#882255",
+                    "Naive" = "#0072B2",
+                    "Greedy" = "#009E73", "Greedy (a=5%)" = "#CC79A7",
+                    "Bayesian" = "#E69F00", "Greedy Bayesian" = "#56B4E9")
 
 ## -- Ensure all facet combinations exist (empty panels kept) --
 agg$mean_label <- sprintf("mean p = %.2f", agg$p_mean)
@@ -81,15 +70,16 @@ other_W <- sort(setdiff(unique(agg$W), slim_W))
 plots <- list()
 
 for (k_val in sort(unique(agg$p_spread))) {
-  ## --- Combined page for W = 51, 52: panels stacked across rows by W ---
+  ## --- Combined page for W = 51, 52: rows = W, cols = eps ---
   dsub <- agg[agg$W %in% slim_W & agg$p_spread == k_val, ]
   if (nrow(dsub) > 0) {
-    n_W_slim <- length(unique(dsub$W))
+    n_eps_slim <- length(unique(dsub$eps))
+    n_W_slim   <- length(unique(dsub$W))
     p <- ggplot(dsub, aes(x = mean_label, y = mean_eval, colour = method)) +
       geom_pointrange(aes(ymin = mean_eval - sd_eval, ymax = mean_eval + sd_eval),
                       size = 0.35, linewidth = 0.5,
                       position = position_dodge(width = 0.6)) +
-      facet_grid(W_label ~ ., scales = "free_y") +
+      facet_grid(W_label ~ eps_label, scales = "free_y") +
       scale_colour_manual(values = method_colors, drop = FALSE) +
       labs(
         title    = sprintf("Heterogeneous Margins -- W = %s,  kappa = %.0f",
@@ -110,20 +100,21 @@ for (k_val in sort(unique(agg$p_spread))) {
         panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
       )
     plots[[paste("slim", k_val)]] <- list(plot = p,
-                                           width  = 6.5,
+                                           width  = 3 + 3.5 * n_eps_slim,
                                            height = 3 + 3 * n_W_slim)
   }
 
-  ## --- Separate pages for other W values: panels stacked across rows by n_false ---
+  ## --- Separate pages for other W values ---
   for (w_val in other_W) {
     dsub <- agg[agg$W == w_val & agg$p_spread == k_val, ]
     if (nrow(dsub) == 0) next
+    n_eps_w   <- length(unique(dsub$eps))
     n_false_w <- length(unique(dsub$n_false))
     p <- ggplot(dsub, aes(x = mean_label, y = mean_eval, colour = method)) +
       geom_pointrange(aes(ymin = mean_eval - sd_eval, ymax = mean_eval + sd_eval),
                       size = 0.35, linewidth = 0.5,
                       position = position_dodge(width = 0.6)) +
-      facet_grid(false_label ~ ., scales = "free_y") +
+      facet_grid(false_label ~ eps_label, scales = "free_y") +
       scale_colour_manual(values = method_colors, drop = FALSE) +
       labs(
         title    = sprintf("Heterogeneous Margins -- W = %d,  kappa = %.0f", w_val, k_val),
@@ -143,7 +134,7 @@ for (k_val in sort(unique(agg$p_spread))) {
         panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
       )
     plots[[paste(w_val, k_val)]] <- list(plot = p,
-                                          width  = 6.5,
+                                          width  = 3 + 3.5 * n_eps_w,
                                           height = 3 + 3 * n_false_w)
   }
 }

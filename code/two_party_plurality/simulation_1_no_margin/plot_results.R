@@ -77,11 +77,12 @@ plots <- list()
 dsub <- agg[agg$W %in% slim_W, ]
 if (nrow(dsub) > 0) {
   n_W_slim <- length(unique(dsub$W))
+  n_false_slim <- length(unique(dsub$n_false))
   p <- ggplot(dsub, aes(x = margin_label, y = mean_eval, colour = method)) +
     geom_pointrange(aes(ymin = mean_eval - sd_eval, ymax = mean_eval + sd_eval),
                     size = 0.35, linewidth = 0.5,
                     position = position_dodge(width = 0.6)) +
-    facet_grid(W_label ~ ., scales = "free_y") +
+    facet_grid(W_label ~ false_label, scales = "free_y") +
     scale_colour_manual(values = method_colors, drop = FALSE) +
     labs(
       title    = sprintf("Homogeneous Margins -- W = %s",
@@ -102,7 +103,7 @@ if (nrow(dsub) > 0) {
       panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
     )
   plots[["slim"]] <- list(plot = p,
-                           width  = 6.5,
+                           width  = 4 + 3 * n_false_slim,
                            height = 3 + 3 * n_W_slim)
 }
 
@@ -115,7 +116,7 @@ for (w_val in other_W) {
     geom_pointrange(aes(ymin = mean_eval - sd_eval, ymax = mean_eval + sd_eval),
                     size = 0.35, linewidth = 0.5,
                     position = position_dodge(width = 0.6)) +
-    facet_grid(false_label ~ ., scales = "free_y") +
+    facet_wrap(~ false_label, scales = "free_y", nrow = 1) +
     scale_colour_manual(values = method_colors, drop = FALSE) +
     labs(
       title    = sprintf("Homogeneous Margins -- W = %d", w_val),
@@ -135,8 +136,8 @@ for (w_val in other_W) {
       panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
     )
   plots[[as.character(w_val)]] <- list(plot = p,
-                                        width  = 6.5,
-                                        height = 3 + 3 * n_false_w)
+                                        width  = 4 + 3 * n_false_w,
+                                        height = 6)
 }
 
 ## -- Write each page as a separate temp PDF, then combine --

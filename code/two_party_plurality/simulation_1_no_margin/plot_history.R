@@ -110,15 +110,13 @@ method_colors <- c("All seats" = "#D55E00", "Reported top-r seats" = "#882255",
                     "Greedy Filtered (a=3)" = "#F0E442")
 hdf$method <- factor(hdf$method, levels = method_order)
 
-## -- One page per (W, n_false); panels = p_alice (stacked across rows) --
+## -- One page per (W, n_false); panels stacked across columns by p_alice --
 pages <- unique(hdf[, c("W_label", "false_label")])
 pages <- pages[order(pages$W_label, pages$false_label), ]
 
 n_margins <- length(unique(hdf$margin_label))
-fig_width  <- 8
-fig_height <- 2 + 2.5 * n_margins
 
-pdf(output_pdf, width = fig_width, height = fig_height)
+pdf_files <- character(0)
 
 for (pg in seq_len(nrow(pages))) {
   wl <- pages$W_label[pg]
@@ -134,7 +132,7 @@ for (pg in seq_len(nrow(pages))) {
                linewidth = 0.6) +
     annotate("text", x = -Inf, y = log_thresh, label = sprintf("log(1/alpha) = %.2f", log_thresh),
              hjust = -0.05, vjust = -0.5, colour = "red", size = 3) +
-    facet_wrap(~ margin_label, scales = "free_x", ncol = 1) +
+    facet_wrap(~ margin_label, scales = "free_x", nrow = 1) +
     scale_colour_manual(values = method_colors, drop = FALSE) +
     scale_fill_manual(values = method_colors, drop = FALSE) +
     labs(
@@ -154,8 +152,24 @@ for (pg in seq_len(nrow(pages))) {
       panel.grid.minor = element_blank()
     )
 
+  fig_width  <- 4 + 4 * n_margins
+  fig_height <- 5
+  tmp <- tempfile(fileext = ".pdf")
+  pdf(tmp, width = fig_width, height = fig_height)
   print(p)
+  dev.off()
+  pdf_files <- c(pdf_files, tmp)
 }
 
-dev.off()
+if (length(pdf_files) == 0) {
+  pdf(output_pdf); dev.off()
+} else if (requireNamespace("qpdf", quietly = TRUE)) {
+  qpdf::pdf_combine(pdf_files, output_pdf)
+  file.remove(pdf_files)
+} else {
+  gs_cmd <- sprintf("gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s %s",
+                     shQuote(output_pdf), paste(shQuote(pdf_files), collapse = " "))
+  system(gs_cmd)
+  file.remove(pdf_files)
+}
 cat(sprintf("Figure saved: %s\n", output_pdf))
