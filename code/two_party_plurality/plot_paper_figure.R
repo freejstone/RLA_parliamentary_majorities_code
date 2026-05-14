@@ -71,13 +71,18 @@ keep <- c("method", "p", "n_false", "t_eval", "panel")
 df   <- rbind(sim1[, keep], sim2[, keep])
 
 ## ============================================================
-## Aggregate: mean +/- SD per cell
+## Aggregate: mean +/- 2 SD per cell
 ## ============================================================
 agg <- aggregate(t_eval ~ method + p + n_false + panel, data = df,
                  FUN = function(x) c(mean = mean(x), sd = sd(x)))
 agg <- do.call(data.frame, agg)
 names(agg)[names(agg) == "t_eval.mean"] <- "mean_eval"
 names(agg)[names(agg) == "t_eval.sd"]   <- "sd_eval"
+
+## Floor the lower whisker at 1 so it stays on the log scale even when
+## (mean - 2*SD) would go non-positive.
+agg$ymin <- pmax(agg$mean_eval - 2 * agg$sd_eval, 1)
+agg$ymax <- agg$mean_eval + 2 * agg$sd_eval
 
 ## ============================================================
 ## Labels
@@ -120,18 +125,19 @@ method_colors <- c("All seats" = "#D55E00", "Reported top-r seats" = "#882255",
 agg$method <- factor(agg$method, levels = method_order)
 
 ## ============================================================
-## Plot
+## Plot: pointrange (mean +/- 2 SD) on a log-scaled y-axis
 ## ============================================================
 p <- ggplot(agg, aes(x = margin_label, y = mean_eval, colour = method)) +
-  geom_pointrange(aes(ymin = mean_eval - sd_eval,
-                      ymax = mean_eval + sd_eval),
+  geom_pointrange(aes(ymin = ymin, ymax = ymax),
                   size = 0.3, linewidth = 0.45,
                   position = position_dodge(width = 0.6)) +
   facet_grid(panel ~ false_label, scales = "free_y") +
+  scale_y_log10(labels = function(x) format(x, big.mark = ",",
+                                            scientific = FALSE, trim = TRUE)) +
   scale_colour_manual(values = method_colors, drop = FALSE) +
   labs(
     x      = "True winning share",
-    y      = "Total ballots sampled (mean +/- SD)",
+    y      = "Total ballots sampled (mean +/- 2 SD, log scale)",
     colour = "Method"
   ) +
   theme_minimal(base_size = 10) +

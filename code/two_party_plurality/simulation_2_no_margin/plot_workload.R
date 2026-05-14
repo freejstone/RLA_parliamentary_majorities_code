@@ -97,9 +97,6 @@ hdf$mean_label   <- sprintf("mean p = %.2f", hdf$p_mean)
 hdf$spread_label <- sprintf("kappa = %.0f", hdf$p_spread)
 hdf$spread_label <- factor(hdf$spread_label,
                             levels = sprintf("kappa = %.0f", sort(unique(hdf$p_spread))))
-hdf$eps_label    <- sprintf("eps = %.2f", hdf$eps)
-hdf$eps_label    <- factor(hdf$eps_label,
-                           levels = sprintf("eps = %.2f", sort(unique(hdf$eps))))
 hdf$W_label      <- sprintf("W = %d", hdf$W)
 hdf$W_label      <- factor(hdf$W_label,
                            levels = sprintf("W = %d", sort(unique(hdf$W))))
@@ -108,41 +105,50 @@ hdf$false_label  <- factor(hdf$false_label,
                            levels = sprintf("%d incorrectly reported",
                                             sort(unique(hdf$n_false))))
 
-method_order  <- c("Full audit", "Top-r Naive", "Naive", "Greedy", "Greedy (a=5%)", "Bayesian", "Greedy Bayesian")
-method_colors <- c("Full audit" = "#D55E00", "Top-r Naive" = "#882255",
-                    "Naive" = "#0072B2",
-                    "Greedy" = "#009E73", "Greedy (a=5%)" = "#CC79A7",
-                    "Bayesian" = "#E69F00", "Greedy Bayesian" = "#56B4E9")
+method_remap <- c(
+  "Naive"                 = "Non-adaptive",
+  "Bayesian"              = "Filtered",
+  "Greedy Bayesian"       = "Greedy Filtered",
+  "Greedy Bayesian (a=3)" = "Greedy Filtered (a=3)",
+  "Top-r Naive"           = "Reported top-r seats",
+  "Full audit"            = "All seats"
+)
+for (old in names(method_remap)) {
+  hdf$method[hdf$method == old] <- method_remap[[old]]
+}
+method_order  <- c("All seats", "Reported top-r seats", "Non-adaptive", "Greedy", "Greedy (a=3)", "Filtered", "Greedy Filtered", "Greedy Filtered (a=3)")
+method_colors <- c("All seats" = "#D55E00", "Reported top-r seats" = "#882255",
+                    "Non-adaptive" = "#0072B2",
+                    "Greedy" = "#009E73", "Greedy (a=3)" = "#CC79A7",
+                    "Filtered" = "#E69F00", "Greedy Filtered" = "#56B4E9",
+                    "Greedy Filtered (a=3)" = "#F0E442")
 hdf$method <- factor(hdf$method, levels = method_order)
 
-## -- One PDF page per (kappa, eps, W, n_false); panels = p_mean --
-pages <- unique(hdf[, c("spread_label", "eps_label", "W_label", "false_label")])
-pages <- pages[order(pages$spread_label, pages$eps_label, pages$W_label, pages$false_label), ]
+## -- One PDF page per (kappa, W); rows = p_mean, cols = n_false --
+pages <- unique(hdf[, c("spread_label", "W_label")])
+pages <- pages[order(pages$spread_label, pages$W_label), ]
 
 n_margins <- length(unique(hdf$mean_label))
-fig_width  <- 4 + 4 * n_margins
-fig_height <- 5
 
-pdf(output_pdf, width = fig_width, height = fig_height)
+pdf_files <- character(0)
 
 for (pg in seq_len(nrow(pages))) {
   sl <- pages$spread_label[pg]
-  el <- pages$eps_label[pg]
   wl <- pages$W_label[pg]
-  fl <- pages$false_label[pg]
 
-  pdata <- hdf[hdf$spread_label == sl & hdf$eps_label == el &
-               hdf$W_label == wl & hdf$false_label == fl, ]
+  pdata <- hdf[hdf$spread_label == sl & hdf$W_label == wl, ]
   if (nrow(pdata) == 0) next
+
+  n_false_pg <- length(unique(pdata$false_label))
 
   p <- ggplot(pdata, aes(x = t_round, colour = method, fill = method)) +
     geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.2, colour = NA) +
     geom_line(aes(y = median), linewidth = 0.6) +
-    facet_wrap(~ mean_label, scales = "free", nrow = 1) +
+    facet_grid(mean_label ~ false_label, scales = "free") +
     scale_colour_manual(values = method_colors, drop = FALSE) +
     scale_fill_manual(values = method_colors, drop = FALSE) +
     labs(
-      title    = sprintf("Cumulative Ballots Sampled vs Round -- %s, %s, %s, %s", sl, el, wl, fl),
+      title    = sprintf("Cumulative Ballots Sampled vs Round -- %s, %s", sl, wl),
       subtitle = "Median with 25th-75th percentile ribbon",
       x      = "Round (t_round)",
       y      = "Cumulative ballots sampled (t_eval)",
@@ -158,8 +164,24 @@ for (pg in seq_len(nrow(pages))) {
       panel.grid.minor = element_blank()
     )
 
+  fig_width  <- 4 + 3.5 * n_false_pg
+  fig_height <- 2 + 2.5 * n_margins
+  tmp <- tempfile(fileext = ".pdf")
+  pdf(tmp, width = fig_width, height = fig_height)
   print(p)
+  dev.off()
+  pdf_files <- c(pdf_files, tmp)
 }
 
-dev.off()
+if (length(pdf_files) == 0) {
+  pdf(output_pdf); dev.off()
+} else if (requireNamespace("qpdf", quietly = TRUE)) {
+  qpdf::pdf_combine(pdf_files, output_pdf)
+  file.remove(pdf_files)
+} else {
+  gs_cmd <- sprintf("gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s %s",
+                     shQuote(output_pdf), paste(shQuote(pdf_files), collapse = " "))
+  system(gs_cmd)
+  file.remove(pdf_files)
+}
 cat(sprintf("Figure saved: %s\n", output_pdf))
