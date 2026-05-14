@@ -167,15 +167,6 @@ true null otherwise).
 The three driver scripts above are independent and can be launched
 concurrently if hardware allows.
 
-**Legacy R = 3 driver (optional):**
-```sh
-zsh run_simulations.sh                           # R = 3 inside one Rscript
-                                                 # per n_false; writes results/
-```
-This was used for the early `R = 3` runs. It writes one `.rds` per `n_false`
-configuration (not per replicate) into `results/`. It is *not* used to
-generate the paper figures.
-
 ## Output
 
 The two output conventions are:
