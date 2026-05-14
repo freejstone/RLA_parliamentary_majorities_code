@@ -21,8 +21,6 @@ code/
 ├── india_2014_no_margin/             Section 5.2 — semi-simulated Indian audit
 │   ├── run_india_audit_multi.R       Parliamentary audit (varies n_false)
 │   ├── run_india_audit_multi_full.R  All-seats baseline (n_false = 0 only)
-│   ├── run_simulations.sh            Driver: 3 configs in parallel, R = 3
-│   │                                 inside a single Rscript per config
 │   ├── run_simulations_parallel.sh   Driver: one job per replicate, R = 10
 │   │                                 by default (used for the paper)
 │   ├── run_simulations_full.sh       Driver: All-seats baseline, parallel,
