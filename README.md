@@ -169,13 +169,11 @@ concurrently if hardware allows.
 
 ## Output
 
-The two output conventions are:
+The output convention is:
 
 - **Per-replicate** (`run_simulations_parallel.sh`, `run_simulations_full.sh`,
   and the `_no_margin` scenario drivers): one `.rds` per `(config, replicate)`
   containing a data frame with one row per `(method)` for that replicate.
-- **Per-config** (the legacy `run_simulations.sh` in `india_2014_no_margin`):
-  one `.rds` per `n_false` configuration containing all `R` replicates inside.
 
 Either way, each row carries the columns `t_eval` (total ballots drawn),
 `t_round` (audit rounds used), `certified` (logical), and configuration
