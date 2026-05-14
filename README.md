@@ -175,7 +175,7 @@ The output convention is:
   and the `_no_margin` scenario drivers): one `.rds` per `(config, replicate)`
   containing a data frame with one row per `(method)` for that replicate.
 
-Either way, each row carries the columns `t_eval` (total ballots drawn),
+Each row carries the columns `t_eval` (total ballots drawn),
 `t_round` (audit rounds used), `certified` (logical), and configuration
 metadata. The `plot_*.R` scripts call `list.files(results_dir, pattern = "\\.rds$")`
 and `rbind` everything they find, so they handle both conventions uniformly —
