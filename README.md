@@ -18,7 +18,7 @@ code/
 │       ├── eci-candidate-wise.csv
 │       └── eci-constituency-wise.csv
 │
-├── india_2014_no_margin/             Section 5.2 — semi-simulated Indian audit
+├── india_2014_no_margin/             Section 5.2 — Indian audit
 │   ├── run_india_audit_multi.R       Parliamentary audit (varies n_false)
 │   ├── run_india_audit_multi_full.R  All-seats baseline (n_false = 0 only)
 │   ├── run_simulations_parallel.sh   Driver: one job per replicate, R = 10
@@ -120,7 +120,7 @@ Rscript plot_paper_figure.R
 The script reads the `W = 60` slice from each scenario, with
 `kappa = 30` for Scenario 2, and writes `paper_figure.pdf` in the same folder.
 
-### Semi-simulated Indian election (Section 4.2)
+### Indian election (Section 4.2)
 
 The Indian scenario is split across three driver scripts. For the paper we
 use the two *parallel* drivers (`run_simulations_parallel.sh` and
