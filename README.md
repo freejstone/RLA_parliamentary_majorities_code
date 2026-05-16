@@ -73,7 +73,7 @@ folder (`cd` into it first). Output `.rds` files and per-config / per-rep logs
 are written to the local `results/` (or `results_R/`) subfolder created on
 the first run.
 
-### Scenario 1 — homogeneous two-candidate (Section 5.1.1)
+### Scenario 1 — homogeneous two-candidate (Section 4.1, Scenario 1)
 
 ```sh
 cd code/two_party_plurality/simulation_1_no_margin
@@ -85,11 +85,13 @@ Rscript plot_workload.R
 
 `run_simulations.sh` sweeps the configuration grid declared at the top of the
 script: `W ∈ {51, 52, 60, 80}`, `p_alice ∈ {0.52, 0.55, 0.60}`,
-`n_false ∈ {0, 3, 5}`, `R = 10` replicates per cell — 36 configurations
+`n_false ∈ {0, 3, 5}`, `R = 100` replicates per cell — 36 configurations
 in total. Configurations run in parallel up to `MAX_JOBS = 16` at a time.
-Edit those constants to change the grid size.
+Edit those constants to change the grid size. The paper figure uses only
+the `W = 60` slice; the other `W` values are available for sensitivity
+checks.
 
-### Scenario 2 — heterogeneous two-candidate (Section 5.1.2)
+### Scenario 2 — heterogeneous two-candidate (Section 4.1, Scenario 2)
 
 ```sh
 cd code/two_party_plurality/simulation_2_no_margin
@@ -101,8 +103,9 @@ Rscript plot_workload.R
 Adds a sweep over the Beta concentration `kappa` (controlling heterogeneity
 of true winning shares across seats) on top of Scenario 1's grid:
 `W ∈ {51, 52, 60, 80}`, `p_mean ∈ {0.52, 0.55, 0.60}`,
-`kappa ∈ {10, 30, 100}`, `n_false ∈ {0, 3, 5}`, `R = 10` — 108
-configurations, with `MAX_JOBS = 16`.
+`kappa ∈ {10, 30, 100}`, `n_false ∈ {0, 3, 5}`, `R = 100` — 108
+configurations, with `MAX_JOBS = 16`. As above, the paper figure uses only
+the `W = 60`, `kappa = 30` slice.
 
 ### Combined Scenario 1 + Scenario 2 figure (Figure 2)
 
@@ -117,7 +120,7 @@ Rscript plot_paper_figure.R
 The script reads the `W = 60` slice from each scenario, with
 `kappa = 30` for Scenario 2, and writes `paper_figure.pdf` in the same folder.
 
-### Semi-simulated Indian election (Section 5.2)
+### Semi-simulated Indian election (Section 4.2)
 
 The Indian scenario is split across three driver scripts. For the paper we
 use the two *parallel* drivers (`run_simulations_parallel.sh` and
@@ -188,7 +191,7 @@ drivers; per-job runtime in parentheses).
 
 | Scenario | Walltime | Bottleneck |
 |---|---:|---|
-| Scenario 1 (R=10, MAX_JOBS=16)             | ~1–2 h  | Greedy Filtered (`a = 3`) |
-| Scenario 2 (R=10, MAX_JOBS=16)             | ~3–6 h  | Greedy Filtered (`a = 3`) |
+| Scenario 1 (R=100, MAX_JOBS=16)            | ~10–20 h | Greedy Filtered (`a = 3`) |
+| Scenario 2 (R=100, MAX_JOBS=16)            | ~30–60 h | Greedy Filtered (`a = 3`) |
 | India parliamentary (R=10, MAX_JOBS=18)    | ~12–24 h overall (~30–60 min per job) | Filtered / Greedy Filtered |
 | India All-seats (R=10, MAX_JOBS=18)        | ~24–48 h overall (~2–4 h per job)     | Sampling all 282 BJP seats to individual certification |

@@ -38,25 +38,33 @@ KAPPA_TARGET <- 30
 
 ## ============================================================
 ## Load and filter
+##
+## Result files are large (history columns can be huge); load only the
+## files we actually need by filtering on filename pattern, and strip
+## the history column immediately on read.
 ## ============================================================
-load_dir <- function(dir) {
-  files <- list.files(dir, pattern = "rds$", full.names = TRUE)
-  if (length(files) == 0L) stop("No .rds files found in ", dir)
+load_files <- function(dir, pattern) {
+  files <- list.files(dir, pattern = pattern, full.names = TRUE)
+  if (length(files) == 0L) stop("No matching .rds files in ", dir)
   do.call(rbind, lapply(files, function(f) {
     d <- readRDS(f); d$history <- NULL; d
   }))
 }
 
-sim1 <- load_dir(file.path(script_dir, "simulation_1_no_margin/results"))
-sim2 <- load_dir(file.path(script_dir, "simulation_2_no_margin/results"))
+## sim_1: results_W60_palice<p>_nfalse<n>.rds
+sim1_pat <- sprintf("^results_W%d_palice[0-9.]+_nfalse[0-9]+\\.rds$", W_TARGET)
+sim1 <- load_files(file.path(script_dir, "simulation_1_no_margin/results"), sim1_pat)
+
+## sim_2: results_W60_pmean<p>_kappa30_nfalse<n>.rds
+sim2_pat <- sprintf("^results_W%d_pmean[0-9.]+_kappa%d_nfalse[0-9]+\\.rds$",
+                    W_TARGET, KAPPA_TARGET)
+sim2 <- load_files(file.path(script_dir, "simulation_2_no_margin/results"), sim2_pat)
 
 r_majority <- floor(sim1$S[1] / 2) + 1L
 
-## Keep only the panels that go onto the figure, and only scenarios
-## where the null is false (W - n_false >= r_majority).
-sim1 <- sim1[sim1$W == W_TARGET & sim1$W - sim1$n_false >= r_majority, ]
-sim2 <- sim2[sim2$W == W_TARGET & sim2$p_spread == KAPPA_TARGET &
-             sim2$W - sim2$n_false >= r_majority, ]
+## Only scenarios where the null is false (W - n_false >= r_majority).
+sim1 <- sim1[sim1$W - sim1$n_false >= r_majority, ]
+sim2 <- sim2[sim2$W - sim2$n_false >= r_majority, ]
 
 if (nrow(sim1) == 0L) stop("No simulation_1 rows after filtering.")
 if (nrow(sim2) == 0L) stop("No simulation_2 rows after filtering.")
