@@ -25,7 +25,7 @@ cd "$(dirname "$0")"
 # --- Tunable knobs (override via environment) ---
 RESULTS_DIR="${RESULTS_DIR:-results_R}"
 N_FALSE_VALS=(${N_FALSE_VALS:-0 3 5})
-R="${R:-10}"             # replicates per n_false
+R="${R:-100}"            # replicates per n_false
 MAX_JOBS="${MAX_JOBS:-18}"
 BASE_SEED="${BASE_SEED:-1}"
 

@@ -35,6 +35,10 @@ agg <- do.call(data.frame, agg)
 names(agg)[names(agg) == "t_eval.mean"] <- "mean_eval"
 names(agg)[names(agg) == "t_eval.sd"]   <- "sd_eval"
 
+## -- Whiskers: floor the lower end at 1 so it stays on the log scale --
+agg$ymin <- pmax(agg$mean_eval - agg$sd_eval, 1)
+agg$ymax <- agg$mean_eval + agg$sd_eval
+
 ## -- Labels --
 agg$false_label  <- sprintf("%d incorrect", agg$n_false)
 agg$false_label  <- factor(agg$false_label,
@@ -74,82 +78,54 @@ agg$mean_label <- sprintf("mean p = %.2f", agg$p_mean)
 agg$mean_label <- factor(agg$mean_label,
                           levels = sprintf("mean p = %.2f", sort(unique(agg$p_mean))))
 
-## -- Group W=51,52 onto one page; separate pages for the rest --
-slim_W  <- c(51, 52)
-other_W <- sort(setdiff(unique(agg$W), slim_W))
+## -- One 3x3 grid per kappa: rows = W (51, 60, 80), cols = n_false (0, 3, 5) --
+grid_W       <- c(51, 60, 80)
+n_W_grid     <- length(grid_W)
+n_false_grid <- length(unique(agg$n_false))
 
 plots <- list()
 
 for (k_val in sort(unique(agg$p_spread))) {
-  ## --- Combined page for W = 51, 52: rows = W, cols = n_false ---
-  dsub <- agg[agg$W %in% slim_W & agg$p_spread == k_val, ]
-  if (nrow(dsub) > 0) {
-    n_W_slim     <- length(unique(dsub$W))
-    n_false_slim <- length(unique(dsub$n_false))
-    p <- ggplot(dsub, aes(x = mean_label, y = mean_eval, colour = method)) +
-      geom_pointrange(aes(ymin = mean_eval - sd_eval, ymax = mean_eval + sd_eval),
-                      size = 0.35, linewidth = 0.5,
-                      position = position_dodge(width = 0.6)) +
-      facet_grid(W_label ~ false_label, scales = "free_y") +
-      scale_colour_manual(values = method_colors, drop = FALSE) +
-      labs(
-        title    = sprintf("Heterogeneous Margins -- W = %s,  kappa = %.0f",
-                            paste(slim_W, collapse = ", "), k_val),
-        subtitle = sprintf("S = %d,  N = %d ballots/seat,  alpha = 0.05",
-                            df$S[1], df$N[1]),
-        x      = "Mean winning share",
-        y      = "Total ballots sampled (mean +/- SD)",
-        colour = "Method"
-      ) +
-      theme_minimal(base_size = 11) +
-      theme(
-        legend.position  = "bottom",
-        strip.text       = element_text(face = "bold", size = 10),
-        plot.title       = element_text(face = "bold", hjust = 0.5, size = 14),
-        plot.subtitle    = element_text(hjust = 0.5, size = 10),
-        panel.grid.minor = element_blank(),
-        panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
-      )
-    plots[[paste("slim", k_val)]] <- list(plot = p,
-                                           width  = 4 + 3 * n_false_slim,
-                                           height = 3 + 3 * n_W_slim)
-  }
+  dsub <- agg[agg$W %in% grid_W & agg$p_spread == k_val, ]
+  if (nrow(dsub) == 0) next
 
-  ## --- Separate pages for other W values: panels in a single row by n_false ---
-  for (w_val in other_W) {
-    dsub <- agg[agg$W == w_val & agg$p_spread == k_val, ]
-    if (nrow(dsub) == 0) next
-    n_false_w <- length(unique(dsub$n_false))
-    p <- ggplot(dsub, aes(x = mean_label, y = mean_eval, colour = method)) +
-      geom_pointrange(aes(ymin = mean_eval - sd_eval, ymax = mean_eval + sd_eval),
-                      size = 0.35, linewidth = 0.5,
-                      position = position_dodge(width = 0.6)) +
-      facet_wrap(~ false_label, scales = "free_y", nrow = 1) +
-      scale_colour_manual(values = method_colors, drop = FALSE) +
-      labs(
-        title    = sprintf("Heterogeneous Margins -- W = %d,  kappa = %.0f", w_val, k_val),
-        subtitle = sprintf("S = %d,  N = %d ballots/seat,  alpha = 0.05",
-                            df$S[1], df$N[1]),
-        x      = "Mean winning share",
-        y      = "Total ballots sampled (mean +/- SD)",
-        colour = "Method"
-      ) +
-      theme_minimal(base_size = 11) +
-      theme(
-        legend.position  = "bottom",
-        strip.text       = element_text(face = "bold", size = 10),
-        plot.title       = element_text(face = "bold", hjust = 0.5, size = 14),
-        plot.subtitle    = element_text(hjust = 0.5, size = 10),
-        panel.grid.minor = element_blank(),
-        panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
-      )
-    plots[[paste(w_val, k_val)]] <- list(plot = p,
-                                          width  = 4 + 3 * n_false_w,
-                                          height = 6)
-  }
+  dsub$W_label <- factor(sprintf("W = %d", dsub$W),
+                         levels = sprintf("W = %d", grid_W))
+
+  ## facet_grid keeps every row/column combination, so filtered-out cells
+  ## (e.g. W = 51 with n_false = 3, 5) appear as blank panels.
+  p <- ggplot(dsub, aes(x = mean_label, y = mean_eval, colour = method)) +
+    geom_pointrange(aes(ymin = ymin, ymax = ymax),
+                    size = 0.35, linewidth = 0.5,
+                    position = position_dodge(width = 0.6)) +
+    facet_grid(W_label ~ false_label, scales = "free_y", drop = FALSE) +
+    scale_y_log10(labels = function(x) format(x, big.mark = ",",
+                                              scientific = FALSE, trim = TRUE)) +
+    scale_colour_manual(values = method_colors, drop = FALSE) +
+    labs(
+      title    = sprintf("Heterogeneous Margins -- W = %s,  kappa = %.0f",
+                          paste(grid_W, collapse = ", "), k_val),
+      subtitle = sprintf("S = %d,  N = %d ballots/seat,  alpha = 0.05",
+                          df$S[1], df$N[1]),
+      x      = "Mean winning share",
+      y      = "Total ballots sampled (mean +/- SD, log scale)",
+      colour = "Method"
+    ) +
+    theme_minimal(base_size = 11) +
+    theme(
+      legend.position  = "bottom",
+      strip.text       = element_text(face = "bold", size = 10),
+      plot.title       = element_text(face = "bold", hjust = 0.5, size = 14),
+      plot.subtitle    = element_text(hjust = 0.5, size = 10),
+      panel.grid.minor = element_blank(),
+      panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
+    )
+  plots[[as.character(k_val)]] <- list(plot = p,
+                                       width  = 4 + 3 * n_false_grid,
+                                       height = 3 + 3 * n_W_grid)
 }
 
-## -- Write each page as a separate temp PDF, then combine --
+## -- Write each kappa's 3x3 grid as a separate temp PDF, then combine --
 tmp_files <- character(0)
 for (nm in names(plots)) {
   item <- plots[[nm]]
@@ -167,4 +143,5 @@ if (requireNamespace("qpdf", quietly = TRUE)) {
   system(gs_cmd)
 }
 file.remove(tmp_files)
-cat(sprintf("Figure saved: %s (%d pages)\n", output_pdf, length(plots)))
+cat(sprintf("Figure saved: %s (%d pages, one 3x3 grid per kappa)\n",
+            output_pdf, length(plots)))

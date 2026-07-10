@@ -30,6 +30,10 @@ agg <- do.call(data.frame, agg)
 names(agg)[names(agg) == "t_eval.mean"] <- "mean_eval"
 names(agg)[names(agg) == "t_eval.sd"]   <- "sd_eval"
 
+## -- Whiskers: floor the lower end at 1 so it stays on the log scale --
+agg$ymin <- pmax(agg$mean_eval - agg$sd_eval, 1)
+agg$ymax <- agg$mean_eval + agg$sd_eval
+
 ## -- Labels --
 agg$false_label <- sprintf("%d incorrectly reported", agg$n_false)
 agg$false_label <- factor(agg$false_label,
@@ -67,95 +71,48 @@ agg$margin_label <- sprintf("p = %.2f", agg$p_alice)
 agg$margin_label <- factor(agg$margin_label,
                             levels = sprintf("p = %.2f", sort(unique(agg$p_alice))))
 
-## -- Group W=51,52 onto one page; separate pages for the rest --
-slim_W  <- c(51, 52)
-other_W <- sort(setdiff(unique(agg$W), slim_W))
+## -- Single 3x3 grid: rows = W (51, 60, 80), columns = n_false (0, 3, 5) --
+grid_W <- c(51, 60, 80)
+dsub <- agg[agg$W %in% grid_W, ]
+if (nrow(dsub) == 0) stop("No scenarios remain for W in {51, 60, 80}.")
 
-plots <- list()
+dsub$W_label <- factor(sprintf("W = %d", dsub$W),
+                       levels = sprintf("W = %d", grid_W))
 
-## --- Combined page for W = 51, 52: panels stacked across rows by W ---
-dsub <- agg[agg$W %in% slim_W, ]
-if (nrow(dsub) > 0) {
-  n_W_slim <- length(unique(dsub$W))
-  n_false_slim <- length(unique(dsub$n_false))
-  p <- ggplot(dsub, aes(x = margin_label, y = mean_eval, colour = method)) +
-    geom_pointrange(aes(ymin = mean_eval - sd_eval, ymax = mean_eval + sd_eval),
-                    size = 0.35, linewidth = 0.5,
-                    position = position_dodge(width = 0.6)) +
-    facet_grid(W_label ~ false_label, scales = "free_y") +
-    scale_colour_manual(values = method_colors, drop = FALSE) +
-    labs(
-      title    = sprintf("Homogeneous Margins -- W = %s",
-                          paste(slim_W, collapse = ", ")),
-      subtitle = sprintf("S = %d total seats,  N = %d ballots/seat,  alpha = 0.05",
-                          df$S[1], df$N[1]),
-      x      = "True winning share",
-      y      = "Total ballots sampled (mean +/- SD)",
-      colour = "Method"
-    ) +
-    theme_minimal(base_size = 12) +
-    theme(
-      legend.position  = "bottom",
-      strip.text       = element_text(face = "bold", size = 11),
-      plot.title       = element_text(face = "bold", hjust = 0.5, size = 14),
-      plot.subtitle    = element_text(hjust = 0.5, size = 10),
-      panel.grid.minor = element_blank(),
-      panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
-    )
-  plots[["slim"]] <- list(plot = p,
-                           width  = 4 + 3 * n_false_slim,
-                           height = 3 + 3 * n_W_slim)
-}
+n_W_grid     <- length(grid_W)
+n_false_grid <- length(unique(agg$n_false))
 
-## --- Separate pages for other W values: panels stacked across rows by n_false ---
-for (w_val in other_W) {
-  dsub <- agg[agg$W == w_val, ]
-  if (nrow(dsub) == 0) next
-  n_false_w <- length(unique(dsub$n_false))
-  p <- ggplot(dsub, aes(x = margin_label, y = mean_eval, colour = method)) +
-    geom_pointrange(aes(ymin = mean_eval - sd_eval, ymax = mean_eval + sd_eval),
-                    size = 0.35, linewidth = 0.5,
-                    position = position_dodge(width = 0.6)) +
-    facet_wrap(~ false_label, scales = "free_y", nrow = 1) +
-    scale_colour_manual(values = method_colors, drop = FALSE) +
-    labs(
-      title    = sprintf("Homogeneous Margins -- W = %d", w_val),
-      subtitle = sprintf("S = %d total seats,  N = %d ballots/seat,  alpha = 0.05",
-                          df$S[1], df$N[1]),
-      x      = "True winning share",
-      y      = "Total ballots sampled (mean +/- SD)",
-      colour = "Method"
-    ) +
-    theme_minimal(base_size = 12) +
-    theme(
-      legend.position  = "bottom",
-      strip.text       = element_text(face = "bold", size = 11),
-      plot.title       = element_text(face = "bold", hjust = 0.5, size = 14),
-      plot.subtitle    = element_text(hjust = 0.5, size = 10),
-      panel.grid.minor = element_blank(),
-      panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
-    )
-  plots[[as.character(w_val)]] <- list(plot = p,
-                                        width  = 4 + 3 * n_false_w,
-                                        height = 6)
-}
+## facet_grid keeps every row/column combination, so filtered-out cells
+## (e.g. W = 51 with n_false = 3, 5) appear as blank panels.
+p <- ggplot(dsub, aes(x = margin_label, y = mean_eval, colour = method)) +
+  geom_pointrange(aes(ymin = ymin, ymax = ymax),
+                  size = 0.35, linewidth = 0.5,
+                  position = position_dodge(width = 0.6)) +
+  facet_grid(W_label ~ false_label, scales = "free_y", drop = FALSE) +
+  scale_y_log10(labels = function(x) format(x, big.mark = ",",
+                                            scientific = FALSE, trim = TRUE)) +
+  scale_colour_manual(values = method_colors, drop = FALSE) +
+  labs(
+    title    = sprintf("Homogeneous Margins -- W = %s",
+                        paste(grid_W, collapse = ", ")),
+    subtitle = sprintf("S = %d total seats,  N = %d ballots/seat,  alpha = 0.05",
+                        df$S[1], df$N[1]),
+    x      = "True winning share",
+    y      = "Total ballots sampled (mean +/- SD, log scale)",
+    colour = "Method"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position  = "bottom",
+    strip.text       = element_text(face = "bold", size = 11),
+    plot.title       = element_text(face = "bold", hjust = 0.5, size = 14),
+    plot.subtitle    = element_text(hjust = 0.5, size = 10),
+    panel.grid.minor = element_blank(),
+    panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.5)
+  )
 
-## -- Write each page as a separate temp PDF, then combine --
-tmp_files <- character(0)
-for (nm in names(plots)) {
-  item <- plots[[nm]]
-  tmp <- tempfile(fileext = ".pdf")
-  pdf(tmp, width = item$width, height = item$height)
-  print(item$plot)
-  dev.off()
-  tmp_files <- c(tmp_files, tmp)
-}
-if (requireNamespace("qpdf", quietly = TRUE)) {
-  qpdf::pdf_combine(tmp_files, output_pdf)
-} else {
-  gs_cmd <- sprintf("gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s %s",
-                     shQuote(output_pdf), paste(shQuote(tmp_files), collapse = " "))
-  system(gs_cmd)
-}
-file.remove(tmp_files)
-cat(sprintf("Figure saved: %s (%d pages)\n", output_pdf, length(plots)))
+## -- Write the single-page 3x3 grid --
+pdf(output_pdf, width = 4 + 3 * n_false_grid, height = 3 + 3 * n_W_grid)
+print(p)
+dev.off()
+cat(sprintf("Figure saved: %s (1 page, 3x3 grid)\n", output_pdf))
