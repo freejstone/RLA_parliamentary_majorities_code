@@ -21,10 +21,10 @@ code/
 ├── india_2014_no_margin/             Section 5.2 — Indian audit
 │   ├── run_india_audit_multi.R       Parliamentary audit (varies n_false)
 │   ├── run_india_audit_multi_full.R  All-seats baseline (n_false = 0 only)
-│   ├── run_simulations_parallel.sh   Driver: one job per replicate, R = 10
+│   ├── run_simulations_parallel.sh   Driver: one job per replicate, R = 100
 │   │                                 by default (used for the paper)
 │   ├── run_simulations_full.sh       Driver: All-seats baseline, parallel,
-│   │                                 R = 10 by default
+│   │                                 R = 100 by default
 │   └── plot_india_results.R          Per-replicate boxplots (Figure 3)
 │
 └── two_party_plurality/
@@ -126,13 +126,13 @@ The Indian scenario is split across three driver scripts. For the paper we
 use the two *parallel* drivers (`run_simulations_parallel.sh` and
 `run_simulations_full.sh`), which dispatch one replicate per job and write a
 separate `.rds` per replicate. This is the configuration that produced the
-`R = 10` results in the paper. The older `run_simulations.sh` is retained
+`R = 100` results in the paper. The older `run_simulations.sh` is retained
 for compatibility with the earlier `R = 3` workflow.
 
 **Parliamentary audit (varies `n_false`, parallel):**
 ```sh
 cd code/india_2014_no_margin
-zsh run_simulations_parallel.sh                  # R = 10  by default
+zsh run_simulations_parallel.sh                  # R = 100  by default
 # or override knobs:
 # R=30 MAX_JOBS=24 zsh run_simulations_parallel.sh
 ```
@@ -140,7 +140,7 @@ Runs all parliamentary methods (Non-adaptive, Greedy `(a = 0)`,
 Greedy `(a = 3)`, Filtered, Greedy Filtered `(a = 0)`,
 Greedy Filtered `(a = 3)`, Reported top-r seats) at `n_false ∈ {0, 3, 5}`.
 Each replicate is one Rscript invocation, so `n_false × R` jobs in total
-(default `3 × 10 = 30`), capped to `MAX_JOBS = 18` concurrent workers.
+(default `3 × 100 = 300`), capped to `MAX_JOBS = 18` concurrent workers.
 Output goes to `results_R/`:
 - `results_R/results_india_multi_nfalse{0,3,5}_rep{1..R}.rds`
 - `results_R/log_nfalse{0,3,5}_rep{1..R}.txt`
@@ -148,9 +148,9 @@ Output goes to `results_R/`:
 **All-seats baseline (`r = |W|`, `n_false = 0` only):**
 ```sh
 cd code/india_2014_no_margin
-zsh run_simulations_full.sh                      # R = 10  by default
+zsh run_simulations_full.sh                      # R = 100  by default
 ```
-Runs only the All-seats baseline, `R = 10` replicates, parallel. The seed
+Runs only the All-seats baseline, `R = 100` replicates, parallel. The seed
 formula matches `run_simulations_parallel.sh` so that for each rep the
 sampled ballot stream is identical to the Non-adaptive method — a true paired
 comparison. Output:
@@ -161,7 +161,7 @@ comparison. Output:
 ```sh
 Rscript plot_india_results.R                     # reads results_R/ by default
 # or:
-# Rscript plot_india_results.R results_R comparison.pdf 10
+# Rscript plot_india_results.R results_R comparison.pdf 100
 ```
 Produces a 1x3 facet (one panel per `n_false`) of per-replicate boxplots
 on a log y-axis. *All seats* is shown only for `n_false = 0` (it tests a
