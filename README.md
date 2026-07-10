@@ -86,7 +86,7 @@ Rscript plot_workload.R
 `run_simulations.sh` sweeps the configuration grid declared at the top of the
 script: `W ∈ {51, 52, 60, 80}`, `p_alice ∈ {0.52, 0.55, 0.60}`,
 `n_false ∈ {0, 3, 5}`, `R = 100` replicates per cell — 36 configurations
-in total. Configurations run in parallel up to `MAX_JOBS = 16` at a time.
+in total. Configurations run in parallel up to `MAX_JOBS = 18` at a time.
 Edit those constants to change the grid size. The paper figure uses only
 the `W = 60` slice; the other `W` values are available for sensitivity
 checks.
@@ -104,7 +104,7 @@ Adds a sweep over the Beta concentration `kappa` (controlling heterogeneity
 of true winning shares across seats) on top of Scenario 1's grid:
 `W ∈ {51, 52, 60, 80}`, `p_mean ∈ {0.52, 0.55, 0.60}`,
 `kappa ∈ {10, 30, 100}`, `n_false ∈ {0, 3, 5}`, `R = 100` — 108
-configurations, with `MAX_JOBS = 16`. As above, the paper figure uses only
+configurations, with `MAX_JOBS = 18`. As above, the paper figure uses only
 the `W = 60`, `kappa = 30` slice.
 
 ### Combined Scenario 1 + Scenario 2 figure (Figure 2)
@@ -191,7 +191,7 @@ drivers; per-job runtime in parentheses).
 
 | Scenario | Walltime | Bottleneck |
 |---|---:|---|
-| Scenario 1 (R=100, MAX_JOBS=16)            | ~10–20 h | Greedy Filtered (`a = 3`) |
-| Scenario 2 (R=100, MAX_JOBS=16)            | ~30–60 h | Greedy Filtered (`a = 3`) |
-| India parliamentary (R=10, MAX_JOBS=18)    | ~12–24 h overall (~30–60 min per job) | Filtered / Greedy Filtered |
-| India All-seats (R=10, MAX_JOBS=18)        | ~24–48 h overall (~2–4 h per job)     | Sampling all 282 BJP seats to individual certification |
+| Scenario 1 (R=100, MAX_JOBS=18)         | ~5 h | Greedy Filtered (`a = 3`) |
+| Scenario 2 (R=100, MAX_JOBS=18)         | ~16 h | Greedy Filtered (`a = 3`) |
+| India parliamentary (R=100, MAX_JOBS=18) | ~2 weeks (LONG) | Greedy Filtered / Filtered |
+| India All-seats (R=100, MAX_JOBS=18)     | ~2 weeks (LONG) | Sampling all 282 BJP seats to individual certification |
