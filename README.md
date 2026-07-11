@@ -1,8 +1,19 @@
-# Reproducibility code for the parliament-election audit paper
+# Source code and data for "Risk-Limiting Audits for Parliamentary Majorities"
 
-This repository contains the code, data, and scripts needed to reproduce the
-simulation results in the paper. Everything is in `R`; running times for the
-larger simulations are non-trivial (see "Runtime expectations" below).
+This repository contains the code, data and scripts needed to reproduce the
+simulation results in the following paper:
+
+Freestone J, Leung D, Vukcevic D (2026).
+*Risk-Limiting Audits for Parliamentary Majorities*.
+Accepted for the
+[Eleventh International Joint Conference on Electronic Voting](evoteid)
+(E-Vote-ID 2026), to be held in Oct 2026 in Estonia.
+
+[evoteid]: https://e-vote-id.org/
+
+The simulations were implemented in R.
+Running times for the larger simulations are non-trivial
+(see [Runtime expectations] below).
 
 ## Contents
 
@@ -18,14 +29,14 @@ code/
 │       ├── eci-candidate-wise.csv
 │       └── eci-constituency-wise.csv
 │
-├── india_2014_no_margin/             Section 5.2 — Indian audit
+├── india_2014_no_margin/             Section 4.2 — Indian audit
 │   ├── run_india_audit_multi.R       Parliamentary audit (varies n_false)
 │   ├── run_india_audit_multi_full.R  All-seats baseline (n_false = 0 only)
 │   ├── run_simulations_parallel.sh   Driver: one job per replicate, R = 100
 │   │                                 by default (used for the paper)
 │   ├── run_simulations_full.sh       Driver: All-seats baseline, parallel,
 │   │                                 R = 100 by default
-│   └── plot_india_results.R          Per-replicate boxplots (Figure 3)
+│   └── plot_india_results.R          Results box plots (Figure 3)
 │
 └── two_party_plurality/
     ├── plot_paper_figure.R           Combined 2x3 figure for sim 1 + sim 2
@@ -59,12 +70,12 @@ code/
 
 ## Data
 
-The Indian-election scenario uses the publicly available 2014 Lok Sabha
+The Indian election scenario uses the publicly available 2014 Lok Sabha
 election results published by the Election Commission of India (ECI). Both
 data files (`eci-candidate-wise.csv` and `eci-constituency-wise.csv`) are
 included under `code/data/india_2014/`. The synthetic two-candidate scenarios
 generate their own ballot populations from the configurations in their
-respective `sim_1.R` scripts; no external data is needed.
+respective `sim_1.R` scripts; no external data are needed.
 
 ## Reproducing the paper
 
@@ -157,13 +168,13 @@ comparison. Output:
 - `results_R/results_india_multi_full_rep{1..R}.rds`
 - `results_R/log_full_rep{1..R}.txt`
 
-**Figure (boxplots, log scale, Figure 3):**
+**Figure (box plots, log scale, Figure 3):**
 ```sh
 Rscript plot_india_results.R                     # reads results_R/ by default
 # or:
 # Rscript plot_india_results.R results_R comparison.pdf 100
 ```
-Produces a 1x3 facet (one panel per `n_false`) of per-replicate boxplots
+Produces a 1x3 facet (one panel per `n_false`) of per-replicate box plots
 on a log y-axis. *All seats* is shown only for `n_false = 0` (it tests a
 true null otherwise).
 
