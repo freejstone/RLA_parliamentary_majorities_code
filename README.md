@@ -13,7 +13,7 @@ Accepted for the
 
 The simulations were implemented in R.
 Running times for the larger simulations are non-trivial
-(see [Runtime expectations][runtime-expectations] below).
+(see [Runtime expectations](#runtime-expectations) below).
 
 ## Contents
 
