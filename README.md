@@ -6,14 +6,14 @@ simulation results in the following paper:
 Freestone J, Leung D, Vukcevic D (2026).
 *Risk-Limiting Audits for Parliamentary Majorities*.
 Accepted for the
-[Eleventh International Joint Conference on Electronic Voting](evoteid)
+[Eleventh International Joint Conference on Electronic Voting][evoteid]
 (E-Vote-ID 2026), to be held in Oct 2026 in Estonia.
 
 [evoteid]: https://e-vote-id.org/
 
 The simulations were implemented in R.
 Running times for the larger simulations are non-trivial
-(see [Runtime expectations] below).
+(see [Runtime expectations][runtime-expectations] below).
 
 ## Contents
 
