@@ -183,11 +183,17 @@ concurrently if hardware allows.
 
 ## Output
 
-The output convention is:
+There are two output conventions:
 
-- **Per-replicate** (`run_simulations_parallel.sh`, `run_simulations_full.sh`,
-  and the `_no_margin` scenario drivers): one `.rds` per `(config, replicate)`
-  containing a data frame with one row per `(method)` for that replicate.
+- **Per-config** (the two-candidate Scenario 1 and Scenario 2 drivers,
+  `run_simulations.sh`): each configuration runs all `R` replicates in a single
+  Rscript call and writes one `.rds` per configuration, containing a data frame
+  with `R` rows per method (one row per replicate). Files are written to
+  `results/`.
+- **Per-replicate** (the Indian drivers `run_simulations_parallel.sh` and
+  `run_simulations_full.sh`, which run one replicate per job): one `.rds` per
+  `(config, replicate)`, containing a data frame with one row per method for
+  that replicate. Files are written to `results_R/`.
 
 Each row carries the columns `t_eval` (total ballots drawn),
 `t_round` (audit rounds used), `certified` (logical), and configuration
