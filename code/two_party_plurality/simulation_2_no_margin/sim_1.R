@@ -222,7 +222,7 @@ collect <- function(res_list, method_name, r_used) {
   df
 }
 
-## -- Method 1: Naive --
+## -- Method 1: Non-adaptive scheme (label "Naive") --
 set.seed(seed + 1000L)
 cat(sprintf("[Naive]  p_mean=%.2f  n_false=%d  R=%d  seed=%d\n", p_mean, n_false, R, seed))
 res_naive <- replicate_audits(
@@ -231,7 +231,7 @@ res_naive <- replicate_audits(
   mu0 = mu0, u = u, eta_mode = eta_mode, eta0 = eta0, d = d, c = c
 )
 
-## -- Method 2: Greedy --
+## -- Method 2: Greedy scheme (a = 0) --
 set.seed(seed + 1000L)
 cat(sprintf("[Greedy] p_mean=%.2f  n_false=%d  R=%d  seed=%d\n", p_mean, n_false, R, seed))
 res_greedy <- replicate_audits(
@@ -241,7 +241,7 @@ res_greedy <- replicate_audits(
   mu0 = mu0, u = u, eta_mode = eta_mode, eta0 = eta0, d = d, c = c
 )
 
-## -- Method 3: Greedy with a = 3 --
+## -- Method 3: Greedy scheme with a = 3 --
 set.seed(seed + 1000L)
 a_greedy3 <- 3L
 cat(sprintf("[Greedy a=%d] p_mean=%.2f  n_false=%d  R=%d  seed=%d\n", a_greedy3, p_mean, n_false, R, seed))
@@ -258,7 +258,7 @@ results <- rbind(
   collect(res_greedy3, "Greedy (a=3)", r_majority)
 )
 
-## -- Method 4: Bayesian (no margin) — prior mean 0.51, eta0 = 0.51 --
+## -- Method 4: Filtered scheme (label "Bayesian") — prior mean 0.51, eta0 = 0.51 --
 set.seed(seed + 1000L)
 cat(sprintf("[Bayesian] p_mean=%.2f  n_false=%d  R=%d  seed=%d\n", p_mean, n_false, R, seed))
 res_bayesian <- replicate_audits(
@@ -271,7 +271,7 @@ res_bayesian <- replicate_audits(
 )
 results <- rbind(results, collect(res_bayesian, "Bayesian", r_majority))
 
-## -- Method 5: Greedy Bayesian (no margin) — prior mean 0.51, eta0 = 0.51 --
+## -- Method 5: Greedy Filtered scheme (label "Greedy Bayesian") — prior mean 0.51, eta0 = 0.51 --
 set.seed(seed + 1000L)
 cat(sprintf("[Greedy Bayesian] p_mean=%.2f  n_false=%d  R=%d  seed=%d\n", p_mean, n_false, R, seed))
 res_greedy_bayes <- replicate_audits(
@@ -284,7 +284,7 @@ res_greedy_bayes <- replicate_audits(
 )
 results <- rbind(results, collect(res_greedy_bayes, "Greedy Bayesian", r_majority))
 
-## -- Method 5b: Greedy Bayesian (a=3) (no margin) --
+## -- Method 5b: Greedy Filtered scheme (a=3) (label "Greedy Bayesian (a=3)") --
 set.seed(seed + 1000L)
 cat(sprintf("[Greedy Bayesian a=%d] p_mean=%.2f  n_false=%d  R=%d  seed=%d\n",
             a_greedy3, p_mean, n_false, R, seed))
@@ -298,7 +298,7 @@ res_greedy_bayes3 <- replicate_audits(
 )
 results <- rbind(results, collect(res_greedy_bayes3, "Greedy Bayesian (a=3)", r_majority))
 
-## -- Method 6: Top-r Naive — ranks by TRUE (oracle) margins --
+## -- Method 6: "Reported top-r seats" baseline (label "Top-r Naive") — ranks by TRUE (oracle) margins --
 top_r_idx <- order(true_margins, decreasing = TRUE)[seq_len(r_majority)]
 set.seed(seed + 1000L)
 cat(sprintf("[Top-r Naive] p_mean=%.2f  n_false=%d  R=%d  seed=%d\n", p_mean, n_false, R, seed))
@@ -310,7 +310,7 @@ res_top_r <- replicate_audits(
 )
 results <- rbind(results, collect(res_top_r, "Top-r Naive", r_majority))
 
-## -- Method 7: Full audit (r = W) — only when n_false = 0 --
+## -- Method 7: "All seats" baseline (label "Full audit", r = W) — only when n_false = 0 --
 if (n_false == 0L) {
   set.seed(seed + 1000L)
   cat(sprintf("[Full]   p_mean=%.2f  n_false=%d  R=%d  seed=%d\n", p_mean, n_false, R, seed))

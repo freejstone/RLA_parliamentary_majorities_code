@@ -1,6 +1,7 @@
 ## ============================================================
 ## plot_results.R — Read saved RDS files and produce a PDF
-## Noisy reported margins version (simulation_3)
+## Two-candidate plurality, heterogeneous margins, no-margin variant
+## (simulation_2_no_margin)
 ## Usage: Rscript plot_results.R [results_dir] [output.pdf]
 ## ============================================================
 
@@ -36,8 +37,8 @@ names(agg)[names(agg) == "t_eval.mean"] <- "mean_eval"
 names(agg)[names(agg) == "t_eval.sd"]   <- "sd_eval"
 
 ## -- Whiskers: floor the lower end at 1 so it stays on the log scale --
-agg$ymin <- pmax(agg$mean_eval - agg$sd_eval, 1)
-agg$ymax <- agg$mean_eval + agg$sd_eval
+agg$ymin <- pmax(agg$mean_eval - 2 * agg$sd_eval, 1)
+agg$ymax <- agg$mean_eval + 2 * agg$sd_eval
 
 ## -- Labels --
 agg$false_label  <- sprintf("%d incorrect", agg$n_false)
@@ -83,6 +84,12 @@ grid_W       <- c(51, 60, 80)
 n_W_grid     <- length(grid_W)
 n_false_grid <- length(unique(agg$n_false))
 
+## Lower y-axis limit (just under 1000, matching the main-text figure). Rows
+## whose natural minimum sits below this are clamped to it; over-long lower
+## whiskers then run off the bottom of the panel (clipped) instead of dragging
+## the log axis down to 1.
+y_lower_floor <- 900
+
 plots <- list()
 
 for (k_val in sort(unique(agg$p_spread))) {
@@ -99,8 +106,11 @@ for (k_val in sort(unique(agg$p_spread))) {
                     size = 0.35, linewidth = 0.5,
                     position = position_dodge(width = 0.6)) +
     facet_grid(W_label ~ false_label, scales = "free_y", drop = FALSE) +
-    scale_y_log10(labels = function(x) format(x, big.mark = ",",
-                                              scientific = FALSE, trim = TRUE)) +
+    scale_y_log10(
+      limits = function(l) c(max(l[1], y_lower_floor), l[2]),
+      oob    = scales::oob_keep,
+      labels = function(x) format(x, big.mark = ",",
+                                  scientific = FALSE, trim = TRUE)) +
     scale_colour_manual(values = method_colors, drop = FALSE) +
     labs(
       title    = sprintf("Heterogeneous Margins -- W = %s,  kappa = %.0f",
@@ -108,7 +118,7 @@ for (k_val in sort(unique(agg$p_spread))) {
       subtitle = sprintf("S = %d,  N = %d ballots/seat,  alpha = 0.05",
                           df$S[1], df$N[1]),
       x      = "Mean winning share",
-      y      = "Total ballots sampled (mean +/- SD, log scale)",
+      y      = "Total ballots sampled (mean +/- 2 SD, log scale)",
       colour = "Method"
     ) +
     theme_minimal(base_size = 11) +

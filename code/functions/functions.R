@@ -131,7 +131,9 @@ draw_from_seat <- function(seat) {
 # on a ballot of type l.
 #
 # The seat tracks J independent e-processes (one per assertion).
-# The seat-level statistic is min_j logM_j  (Option 1: naive min).
+# The seat-level process is the minimum of the per-assertion processes,
+# i.e. E_{s,t} = min_j E_{s,j,t} (see paper, Section "A test process for
+# certifying a single seat").
 
 # Jack: Checked
 new_seat_general <- function(id, N, type_probs, assorter_matrix) {
@@ -471,8 +473,10 @@ log_Mr_from_seats <- function(seats, r_majority) {
   k <- W - r_majority + 1L
   if (k <= 0L) stop("Need W >= r_majority.")
   
-  # IMPORTANT: use logM (seat-level M_{c,t,lambda}), not logT
-  # For multi-assertion seats, seat-level logM = min(logM_j) (Option 1)
+  # IMPORTANT: use logM (seat-level process E_{s,t}), not logT
+  # For multi-assertion seats, the seat-level process is the minimum over the
+  # seat's assertions: logM = min_j logM_j (see paper, Section "A test process
+  # for certifying a single seat").
   logs <- vapply(seats, function(s) min(s$logM), numeric(1))
   sum(sort(logs, decreasing = FALSE)[seq_len(k)])
 }
@@ -481,12 +485,15 @@ log_Mr_from_seats <- function(seats, r_majority) {
 ## Lambda policies
 ## ============================================================
 
-# Naive (Section 3.1): lambda_{c,t} = 1 for all c and t
+# Non-adaptive scheme (paper, Section "Adaptive sampling schemes: Non-adaptive";
+# labelled "Naive" internally): sample every seat, i.e. D_{s,t} = 1 for all s, t.
 # Jack: Checked
 lambda_naive <- function(t_round, seats) rep(1.0, length(seats))
 
-# Top-r Naive with fallback: sample top-r seats first; when all are
-# exhausted without certifying, switch to remaining seats.
+# "Reported top-r seats" baseline (paper, Section "Results"; labelled
+# "Top-r Naive" internally): audit only the r seats ranked highest by margin.
+# With fallback: once all r are exhausted without certifying, switch to the
+# remaining seats.
 #Jack: Checked
 make_lambda_top_r_fallback <- function(top_r_indices) {
   function(t_round, seats) {
@@ -501,7 +508,9 @@ make_lambda_top_r_fallback <- function(top_r_indices) {
   }
 }
 
-# "Propping up the weakest" (Section 3.2)
+# Greedy scheme (paper, Section "Adaptive sampling schemes: Greedy"):
+# sample the d_t seats with the weakest seat-level processes, where d_t is
+# derived from delta_t with the hedging parameter a (a = 0 is most aggressive).
 # Returns a closure that captures r_majority, alpha, and a.
 # Jack: Checked
 make_lambda_greedy <- function(r_majority, alpha, a = 0L) {
@@ -562,9 +571,7 @@ make_lambda_greedy <- function(r_majority, alpha, a = 0L) {
 }
 
 ## ============================================================
-## Bayesian adaptive lambda (Section 3.3)
-## ============================================================
-## Helper: compute expected one-step gain for all seats
+## Helper: expected one-step log-gain per seat (unused; kept for reference)
 ## ============================================================
 
 # Jack: Unused
@@ -618,20 +625,29 @@ make_lambda_greedy <- function(r_majority, alpha, a = 0L) {
 }
 
 ## ============================================================
-## Bayesian adaptive lambda (Section 3.6)
+## Filtered scheme (paper, Section "Adaptive sampling schemes: Filtered";
+## labelled "Bayesian" internally)
 ## ============================================================
 #
+# Restricts sampling to the |W| - r + 1 weakest seats (the "active set") and,
+# among those, samples only seats whose posterior probability
+#   pi_s = min_j P(theta_{s,j} > 1/2 + eps | data)   (eps = 0)
+# exceeds the threshold tau (default 0.01). This filters out seats that appear
+# to be falsely reported. If no active-set seat passes the filter in a round,
+# the filter is dropped for that round (revert to Greedy on the active set).
+#
 # Two-candidate (Beta) path:
-#   Each seat gets a Beta prior on its true Alice share p_c.
-#   Mean = reported margin; concentration = conc.
+#   Each seat gets a Beta prior on its true Alice share p_s.
+#   Mean = reference margin; concentration = conc.
 #   Posterior update: alpha += sum_x, beta += (k - sum_x).
+#   pi_s = P(p_s > 1/2 | data) via the Beta CDF (exact).
 #
 # General (Dirichlet) path:
 #   Each seat gets a Dirichlet prior on ballot-type proportions.
-#   Prior:  alpha_{c,0,l} = p_hat_{c,l} * conc.
-#   Update: alpha_{c,k,l} = alpha_{c,0,l} + n_{c,l}.
-#   Selection: posterior mean of assertion pop mean > 1/2,
-#     i.e. sum_l (alpha_{c,l} / sum(alpha_c)) * a_l > 1/2.
+#   Prior:  alpha_{s,0,l} = p_hat_{s,l} * conc.
+#   Update: alpha_{s,k,l} = alpha_{s,0,l} + n_{s,l}.
+#   pi_s = min_j P(theta_{s,j} > 1/2 | data) via a normal approximation to each
+#     assertion mean theta_{s,j} = sum_l a_{j,l} p_{s,l}.
 #
 # The Dirichlet path is activated when seat_proportions and
 # assorter_values are provided.  Otherwise uses Beta (backward compat).
@@ -642,7 +658,7 @@ make_lambda_bayesian <- function(r_majority, alpha,
                                   seat_proportions = NULL,
                                   assorter_values = NULL,
                                   conc = NULL,
-                                  tau = 0.1) {
+                                  tau = 0.01) {
   log_thresh <- log(1 / alpha)
   use_dirichlet <- !is.null(seat_proportions) && !is.null(assorter_values)
 
@@ -793,14 +809,16 @@ make_lambda_bayesian <- function(r_majority, alpha,
 }
 
 ## ============================================================
-## Greedy + Bayesian adaptive lambda
+## Greedy Filtered scheme (paper, Section "Adaptive sampling schemes:
+## Greedy Filtered"; labelled "Greedy Bayesian" internally)
 ## ============================================================
 #
-# Combines the greedy scheme's d_t seat selection with the
-# Bayesian posterior-probability selector.  Steps:
+# Combines the Greedy scheme's d_t active-set window with the Filtered
+# scheme's posterior filter (pi_s > tau).  Steps:
 #   1. Compute delta_t, d_t exactly as make_lambda_greedy (with 'a').
 #   2. Expand d_t if all selected seats are exhausted.
-#   3. Among d_t seats, sample all seats whose P(theta > 0.5 | data) > tau
+#   3. Among the d_t weakest seats, sample those with pi_s > tau, where
+#      pi_s = min_j P(theta_{s,j} > 1/2 | data)
 #      (normal approximation for Dirichlet, exact pbeta for Beta).
 #
 # Supports both Beta (two-candidate) and Dirichlet (general) paths.
@@ -811,7 +829,7 @@ make_lambda_greedy_bayesian <- function(r_majority, alpha, a = 0L,
                                         seat_proportions = NULL,
                                         assorter_values = NULL,
                                         conc = NULL,
-                                        tau = 0.1) {
+                                        tau = 0.01) {
   log_thresh <- log(1 / alpha)
   use_dirichlet <- !is.null(seat_proportions) && !is.null(assorter_values)
 

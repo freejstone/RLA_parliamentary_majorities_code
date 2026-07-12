@@ -1,6 +1,7 @@
 ## ============================================================
 ## plot_results.R — Read saved RDS files and produce a PDF
-## Homogeneous margins + noisy reports (simulation_4)
+## Two-candidate plurality, homogeneous margins, no-margin variant
+## (simulation_1_no_margin)
 ## Usage: Rscript plot_results.R [results_dir] [output.pdf]
 ## ============================================================
 
@@ -31,8 +32,8 @@ names(agg)[names(agg) == "t_eval.mean"] <- "mean_eval"
 names(agg)[names(agg) == "t_eval.sd"]   <- "sd_eval"
 
 ## -- Whiskers: floor the lower end at 1 so it stays on the log scale --
-agg$ymin <- pmax(agg$mean_eval - agg$sd_eval, 1)
-agg$ymax <- agg$mean_eval + agg$sd_eval
+agg$ymin <- pmax(agg$mean_eval - 2 * agg$sd_eval, 1)
+agg$ymax <- agg$mean_eval + 2 * agg$sd_eval
 
 ## -- Labels --
 agg$false_label <- sprintf("%d incorrectly reported", agg$n_false)
@@ -82,6 +83,12 @@ dsub$W_label <- factor(sprintf("W = %d", dsub$W),
 n_W_grid     <- length(grid_W)
 n_false_grid <- length(unique(agg$n_false))
 
+## Lower y-axis limit (just under 1000, matching the main-text figure). Rows
+## whose natural minimum sits below this are clamped to it; over-long lower
+## whiskers then run off the bottom of the panel (clipped) instead of dragging
+## the log axis down to 1.
+y_lower_floor <- 900
+
 ## facet_grid keeps every row/column combination, so filtered-out cells
 ## (e.g. W = 51 with n_false = 3, 5) appear as blank panels.
 p <- ggplot(dsub, aes(x = margin_label, y = mean_eval, colour = method)) +
@@ -89,8 +96,11 @@ p <- ggplot(dsub, aes(x = margin_label, y = mean_eval, colour = method)) +
                   size = 0.35, linewidth = 0.5,
                   position = position_dodge(width = 0.6)) +
   facet_grid(W_label ~ false_label, scales = "free_y", drop = FALSE) +
-  scale_y_log10(labels = function(x) format(x, big.mark = ",",
-                                            scientific = FALSE, trim = TRUE)) +
+  scale_y_log10(
+    limits = function(l) c(max(l[1], y_lower_floor), l[2]),
+    oob    = scales::oob_keep,
+    labels = function(x) format(x, big.mark = ",",
+                                scientific = FALSE, trim = TRUE)) +
   scale_colour_manual(values = method_colors, drop = FALSE) +
   labs(
     title    = sprintf("Homogeneous Margins -- W = %s",
@@ -98,7 +108,7 @@ p <- ggplot(dsub, aes(x = margin_label, y = mean_eval, colour = method)) +
     subtitle = sprintf("S = %d total seats,  N = %d ballots/seat,  alpha = 0.05",
                         df$S[1], df$N[1]),
     x      = "True winning share",
-    y      = "Total ballots sampled (mean +/- SD, log scale)",
+    y      = "Total ballots sampled (mean +/- 2 SD, log scale)",
     colour = "Method"
   ) +
   theme_minimal(base_size = 12) +

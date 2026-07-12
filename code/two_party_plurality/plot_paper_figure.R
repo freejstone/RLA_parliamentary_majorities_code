@@ -158,7 +158,7 @@ p <- ggplot(agg, aes(x = margin_label, y = mean_eval, colour = method)) +
     panel.grid.minor = element_blank(),
     panel.border     = element_rect(colour = "grey80", fill = NA, linewidth = 0.4)
   ) +
-  guides(colour = guide_legend(nrow = 2, byrow = TRUE))
+  guides(colour = guide_legend(nrow = 2, byrow = FALSE))
 
 pdf(output_pdf, width = 9, height = 6)
 print(p)

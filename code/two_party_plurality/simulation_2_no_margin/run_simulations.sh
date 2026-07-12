@@ -28,7 +28,7 @@ W_VALS=(51 52 60 80)
 S=100
 N=5000
 R=100
-MAX_JOBS=16
+MAX_JOBS=18
 
 P_MEAN_VALS=(0.52 0.55 0.60)
 P_SPREAD_VALS=(10 30 100)       # kappa: 10=very heterogeneous, 100=nearly homogeneous
